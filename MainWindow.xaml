@@ -1,0 +1,145 @@
+﻿<Window x:Class="BrowserSelect.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:BrowserSelect"
+        mc:Ignorable="d"
+        Title="Browser Selector" Height="500" Width="700" WindowStartupLocation="CenterScreen" Keyboard.KeyUp="Window_KeyUp">
+    <Grid>
+        <Grid Margin="10" Name="Grid" >
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" Name="UrlRow"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="25"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Text="Url" Grid.Row="0" Grid.Column="0" TextWrapping="Wrap" Foreground="Blue" Grid.ColumnSpan="4" FontSize="10" Margin="5" Name="Url"></TextBlock>
+            
+            <!-- Firefox -->
+            <TextBlock Grid.Row="1" Grid.Column="0" FontSize="12" Margin="5">Firefox Profiles:</TextBlock>
+            <ListBox ScrollViewer.HorizontalScrollBarVisibility="Hidden" Name="FirefoxListBox" Grid.Row="2" Grid.Column="0" Margin="5" SelectionChanged="FirefoxListBox_SelectionChanged" MouseDoubleClick="FirefoxListBox_MouseDoubleClick"
+                     Keyboard.KeyUp="Listbox_KeyUp">
+                <ListBox.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Open" Click="FirefoxListBox_ContextMenu_Open_Click"/>
+                    </ContextMenu>
+                </ListBox.ContextMenu>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding DisplayName}" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- Firefox -->
+            <TextBlock Grid.Row="3" Grid.Column="0" FontSize="12" Margin="5">Firefox Profiles:</TextBlock>
+            <ListBox ScrollViewer.HorizontalScrollBarVisibility="Hidden" Name="FirefoxDevListBox" Grid.Row="4" Grid.Column="0" Margin="5" SelectionChanged="FirefoxDevListBox_SelectionChanged" MouseDoubleClick="FirefoxDevListBox_MouseDoubleClick"
+                     Keyboard.KeyUp="Listbox_KeyUp">
+                <ListBox.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Open" Click="FirefoxDevListBox_ContextMenu_Open_Click"/>
+                    </ContextMenu>
+                </ListBox.ContextMenu>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding DisplayName}" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- Edge -->
+            <TextBlock Grid.Row="1" Grid.Column="1" FontSize="12" Margin="5">Edge Profiles:</TextBlock>
+            <ListBox ScrollViewer.HorizontalScrollBarVisibility="Hidden" Name="EdgeListBox" Grid.Row="2" Grid.Column="1" Margin="5" SelectionChanged="EdgeListBox_SelectionChanged" MouseDoubleClick="EdgeListBox_MouseDoubleClick"
+                     Keyboard.KeyUp="Listbox_KeyUp">
+                <ListBox.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Open" Click="EdgeListBox_ContextMenu_Open_Click"/>
+                    </ContextMenu>
+                </ListBox.ContextMenu>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding DisplayName}" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- Edge Dev -->
+            <TextBlock Grid.Row="3" Grid.Column="1" FontSize="12" Margin="5">Edge Dev Profiles:</TextBlock>
+            <ListBox ScrollViewer.HorizontalScrollBarVisibility="Hidden" Name="EdgeDevListBox" Grid.Row="4" Grid.Column="1" Margin="5" SelectionChanged="EdgeDevListBox_SelectionChanged" MouseDoubleClick="EdgeDevListBox_MouseDoubleClick"
+                     Keyboard.KeyUp="Listbox_KeyUp">
+                <ListBox.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Open" Click="EdgeDevListBox_ContextMenu_Open_Click"/>
+                    </ContextMenu>
+                </ListBox.ContextMenu>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding DisplayName}" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            
+            <!-- Chrome -->
+            <TextBlock Grid.Row="1" Grid.Column="2" FontSize="12" Margin="5">Google Chrome Profiles:</TextBlock>
+            <ListBox ScrollViewer.HorizontalScrollBarVisibility="Hidden" Name="ChromeListBox" Grid.Row="2" Grid.Column="2" Margin="5" SelectionChanged="ChromeListBox_SelectionChanged" MouseDoubleClick="ChromeListBox_MouseDoubleClick"
+                     Keyboard.KeyUp="Listbox_KeyUp">
+                <ListBox.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Open" Click="ChromeListBox_ContextMenu_Open_Click"/>
+                    </ContextMenu>
+                </ListBox.ContextMenu>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding DisplayName}" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            
+            <!-- Chrome Dev -->
+            <TextBlock Grid.Row="3" Grid.Column="2" FontSize="12" Margin="5">Google Chrome DEV Profiles:</TextBlock>
+            <ListBox ScrollViewer.HorizontalScrollBarVisibility="Hidden" Name="ChromeDevListBox" Grid.Row="4" Grid.Column="2" Margin="5" SelectionChanged="ChromeDevListBox_SelectionChanged" MouseDoubleClick="ChromeDevListBox_MouseDoubleClick"
+                     Keyboard.KeyUp="Listbox_KeyUp">
+                <ListBox.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Open" Click="ChromeDevListBox_ContextMenu_Open_Click"/>
+                    </ContextMenu>
+                </ListBox.ContextMenu>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding DisplayName}" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- Chromium -->
+            <TextBlock Grid.Row="1" Grid.Column="3" FontSize="12" Margin="5">Chromium Profiles:</TextBlock>
+            <ListBox ScrollViewer.HorizontalScrollBarVisibility="Hidden" Name="ChromiumListBox" Grid.Row="2" Grid.Column="3" Margin="5" SelectionChanged="ChromiumListBox_SelectionChanged" MouseDoubleClick="ChromiumListBox_MouseDoubleClick"
+                     Keyboard.KeyUp="Listbox_KeyUp">
+                <ListBox.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Open" Click="ChromiumListBox_ContextMenu_Open_Click"/>
+                    </ContextMenu>
+                </ListBox.ContextMenu>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding DisplayName}" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <StackPanel Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2" >
+                <Button x:Name="SelectButton" Content="Select" Margin="5" Click="SelectButton_Click"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "BrowserSelector Run": {
+      "commandName": "Project",
+      "commandLineArgs": "http://google.com"
+    },
+    "BrowserSelector --install": {
+      "commandName": "Project",
+      "commandLineArgs": "--install"
+    }
+  }
+}
