@@ -14,9 +14,9 @@ BrowserSelect simplifies this complexity. By integrating with Windows as a **def
 
 The tool automatically detects installations of the following browsers, ensuring only relevant options are displayed:
 
-  * Firefox & Firefox Developer Edition
-  * Microsoft Edge & Edge Developer
-  * Google Chrome & Chrome Developer
+  * Firefox & Waterfox
+  * Microsoft Edge & Helium
+  * Google Chrome & Brave
   * Chromium
 
 *I built this as a quick and effective tool to scratch my own itch; it's designed to get the job done without fuss. The application is currently in **beta**, and contributions are welcome\!*

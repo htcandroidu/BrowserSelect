@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Diagnostics;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -15,59 +16,151 @@ namespace BrowserSelect
 {
     public class MyItem
     {
-        public string DisplayName { get; set; }
-        public string Path { get; set; }
-        public string DirName { get; set; }
+        public string DisplayName { get; set; } = string.Empty;
+        public string Path { get; set; } = string.Empty;
+        public string DirName { get; set; } = string.Empty;
+        public string ToolTip { get; set; } = string.Empty;
     }
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
     public partial class MainWindow : Window
     {
+        private string? _edgeExe;
+        private string? _heliumExe;
+        private string? _firefoxExe;
+        private string? _waterfoxExe;
+        private string? _chromiumExe;
+        private string? _chromeExe;
+        private string? _braveExe;
+
         public MainWindow()
         {
             InitializeComponent();
         }
 
-        private void SelectButton_Click(object sender, RoutedEventArgs e)
+        private static bool TryGetTargetUrl(string? raw, out string? url)
         {
-            var i = EdgeListBox.SelectedItem as MyItem;
-            if (i != null)
+            url = null;
+            if (string.IsNullOrWhiteSpace(raw))
+                return true;
+            raw = raw.Trim();
+            if (Uri.TryCreate(raw, UriKind.Absolute, out var uri) &&
+                (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
             {
-                System.Diagnostics.Process.Start("C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe", $"--profile-directory=\"{i.DirName}\" --no-first-run --no-default-browser-check --ash-no-nudges {Url.Text}");
-                Application.Current.Shutdown();
+                url = uri.AbsoluteUri;
+                return true;
+            }
+            return false;
+        }
+
+        private static void StartBrowser(string exePath, IEnumerable<string> args)
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = exePath,
+                UseShellExecute = false,
+            };
+            foreach (var a in args)
+                psi.ArgumentList.Add(a);
+            Process.Start(psi);
+        }
+
+        private void SelectButton_Click(object sender, RoutedEventArgs? e)
+        {
+            if (!TryGetTargetUrl(Url.Text, out var targetUrl))
+            {
+                MessageBox.Show("The supplied URL is not a valid http(s) URL and was not opened.", "BrowserSelect", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            i = EdgeDevListBox.SelectedItem as MyItem;
+            bool privateMode = IncognitoCheckBox.IsChecked == true;
+
+            static bool IsValidProfileValue(string? v) =>
+                !string.IsNullOrWhiteSpace(v) && !v.Contains('"');
+
+            void LaunchChromium(string? exePath, MyItem item, bool useFlagSwitches, string? privateFlag)
+            {
+                if (!IsValidProfileValue(item.DirName))
+                {
+                    MessageBox.Show("The selected profile name is invalid and was not opened.", "BrowserSelect", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+                if (exePath == null || !File.Exists(exePath))
+                {
+                    MessageBox.Show($"Browser executable not found:{Environment.NewLine}{exePath}", "BrowserSelect", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+                var args = new List<string>();
+                if (useFlagSwitches)
+                    args.Add("--flag-switches-begin");
+                args.Add($"--profile-directory={item.DirName}");
+                args.Add("--no-first-run");
+                args.Add("--no-default-browser-check");
+                args.Add("--ash-no-nudges");
+                if (privateFlag != null)
+                    args.Add(privateFlag);
+                if (useFlagSwitches)
+                    args.Add("--flag-switches-end");
+                if (targetUrl != null)
+                    args.Add(targetUrl);
+                StartBrowser(exePath, args);
+                Application.Current.Shutdown();
+            }
+
+            void LaunchFirefox(string? exePath, MyItem item, bool privateMode)
+            {
+                if (!IsValidProfileValue(item.DisplayName))
+                {
+                    MessageBox.Show("The selected profile name is invalid and was not opened.", "BrowserSelect", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+                if (exePath == null || !File.Exists(exePath))
+                {
+                    MessageBox.Show($"Browser executable not found:{Environment.NewLine}{exePath}", "BrowserSelect", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+                var args = new List<string> { "-p", item.DisplayName };
+                if (privateMode)
+                    args.Add("--private-window");
+                if (targetUrl != null)
+                    args.Add(targetUrl);
+                StartBrowser(exePath, args);
+                Application.Current.Shutdown();
+            }
+
+            var i = EdgeListBox.SelectedItem as MyItem;
             if (i != null)
             {
-                System.Diagnostics.Process.Start("C:\\Program Files (x86)\\Microsoft\\Edge Dev\\Application\\msedge.exe", $"--profile-directory=\"{i.DirName}\" --no-first-run --no-default-browser-check --ash-no-nudges {Url.Text}");
-                Application.Current.Shutdown();
+                LaunchChromium(_edgeExe, i, useFlagSwitches: false, privateFlag: privateMode ? "--inprivate" : null);
+                return;
+            }
+
+            i = HeliumListBox.SelectedItem as MyItem;
+            if (i != null)
+            {
+                LaunchChromium(_heliumExe, i, useFlagSwitches: true, privateFlag: privateMode ? "--incognito" : null);
                 return;
             }
 
             i = FirefoxListBox.SelectedItem as MyItem;
             if (i != null)
             {
-                System.Diagnostics.Process.Start("C:\\Program Files\\Mozilla Firefox\\firefox.exe", $"-p \"{i.DisplayName}\" {Url.Text}");
-                Application.Current.Shutdown();
+                LaunchFirefox(_firefoxExe, i, privateMode);
                 return;
             }
 
-            i = FirefoxDevListBox.SelectedItem as MyItem;
+            i = WaterfoxListBox.SelectedItem as MyItem;
             if (i != null)
             {
-                System.Diagnostics.Process.Start("C:\\Program Files\\Firefox Developer Edition\\firefox.exe", $"-p \"{i.DisplayName}\" {Url.Text}");
-                Application.Current.Shutdown();
+                LaunchFirefox(_waterfoxExe, i, privateMode);
                 return;
             }
 
             i = ChromiumListBox.SelectedItem as MyItem;
             if (i != null)
             {
-                System.Diagnostics.Process.Start("C:\\Program Files\\Chromium\\Application\\chrome.exe", $"--flag-switches-begin --profile-directory=\"{i.DirName}\" --no-first-run --no-default-browser-check --ash-no-nudges --flag-switches-end {Url.Text}");
-                Application.Current.Shutdown();
+                LaunchChromium(_chromiumExe, i, useFlagSwitches: true, privateFlag: privateMode ? "--incognito" : null);
                 return;
 
             }
@@ -75,17 +168,15 @@ namespace BrowserSelect
             i = ChromeListBox.SelectedItem as MyItem;
             if (i != null)
             {
-                System.Diagnostics.Process.Start("C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", $"--flag-switches-begin --profile-directory=\"{i.DirName}\" --no-first-run --no-default-browser-check --ash-no-nudges --flag-switches-end {Url.Text}");
-                Application.Current.Shutdown();
+                LaunchChromium(_chromeExe, i, useFlagSwitches: true, privateFlag: privateMode ? "--incognito" : null);
                 return;
 
             }
 
-            i = ChromeDevListBox.SelectedItem as MyItem;
+            i = BraveListBox.SelectedItem as MyItem;
             if (i != null)
             {
-                System.Diagnostics.Process.Start("C:\\Program Files\\Google\\Chrome Dev\\Application\\chrome.exe", $"--flag-switches-begin --profile-directory=\"{i.DirName}\" --no-first-run --no-default-browser-check --ash-no-nudges --flag-switches-end {Url.Text}");
-                Application.Current.Shutdown();
+                LaunchChromium(_braveExe, i, useFlagSwitches: true, privateFlag: privateMode ? "--incognito" : null);
                 return;
 
             }
@@ -109,258 +200,248 @@ namespace BrowserSelect
                 this.Grid.RowDefinitions[0].Height = new GridLength(0);
             }
 
-            var edgePath = Environment.ExpandEnvironmentVariables("%USERPROFILE%\\AppData\\Local\\Microsoft\\Edge\\User Data");
-            if (Directory.Exists(edgePath))
+            _edgeExe = BrowserLocator.Resolve("msedge.exe", new[]
             {
-                EdgeListBox.Items.Clear();
+                @"%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe",
+                @"%ProgramFiles%\Microsoft\Edge\Application\msedge.exe",
+                @"%LocalAppData%\Microsoft\Edge\Application\msedge.exe",
+            });
+            _heliumExe = BrowserLocator.Resolve("chrome.exe", new[]
+            {
+                @"%LocalAppData%\imput\Helium\Application\chrome.exe",
+                @"%ProgramFiles%\imput\Helium\Application\chrome.exe",
+                @"%ProgramFiles(x86)%\imput\Helium\Application\chrome.exe",
+            });
+            _firefoxExe = BrowserLocator.Resolve("firefox.exe", new[]
+            {
+                @"%ProgramFiles%\Mozilla Firefox\firefox.exe",
+                @"%ProgramFiles(x86)%\Mozilla Firefox\firefox.exe",
+                @"%LocalAppData%\Programs\Mozilla Firefox\firefox.exe",
+            });
+            _waterfoxExe = BrowserLocator.Resolve("waterfox.exe", new[]
+            {
+                @"%ProgramFiles%\Waterfox\waterfox.exe",
+                @"%ProgramFiles(x86)%\Waterfox\waterfox.exe",
+                @"%LocalAppData%\Programs\Waterfox\waterfox.exe",
+            });
+            _chromiumExe = BrowserLocator.Resolve("chrome.exe", new[]
+            {
+                @"%ProgramFiles%\Chromium\Application\chrome.exe",
+                @"%ProgramFiles(x86)%\Chromium\Application\chrome.exe",
+                @"%LocalAppData%\Chromium\Application\chrome.exe",
+            });
+            _chromeExe = BrowserLocator.Resolve("chrome.exe", new[]
+            {
+                @"%ProgramFiles%\Google\Chrome\Application\chrome.exe",
+                @"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe",
+                @"%LocalAppData%\Google\Chrome\Application\chrome.exe",
+            });
+            _braveExe = BrowserLocator.Resolve("brave.exe", new[]
+            {
+                @"%ProgramFiles%\BraveSoftware\Brave-Browser\Application\brave.exe",
+                @"%ProgramFiles(x86)%\BraveSoftware\Brave-Browser\Application\brave.exe",
+                @"%LocalAppData%\BraveSoftware\Brave-Browser\Application\brave.exe",
+            });
 
-                foreach (var s in Directory.GetDirectories(edgePath))
+            MarkUnavailable(EdgeListBox, EdgeHeader, _edgeExe);
+            MarkUnavailable(HeliumListBox, HeliumHeader, _heliumExe);
+            MarkUnavailable(FirefoxListBox, FirefoxHeader, _firefoxExe);
+            MarkUnavailable(WaterfoxListBox, WaterfoxHeader, _waterfoxExe);
+            MarkUnavailable(ChromiumListBox, ChromiumHeader, _chromiumExe);
+            MarkUnavailable(ChromeListBox, ChromeHeader, _chromeExe);
+            MarkUnavailable(BraveListBox, BraveHeader, _braveExe);
+
+            var edge = LoadChromiumProfiles(Environment.ExpandEnvironmentVariables("%USERPROFILE%\\AppData\\Local\\Microsoft\\Edge\\User Data"), EdgeListBox);
+            var helium = LoadChromiumProfiles(Environment.ExpandEnvironmentVariables("%USERPROFILE%\\AppData\\Local\\imput\\Helium\\User Data"), HeliumListBox);
+            var chromium = LoadChromiumProfiles(Environment.ExpandEnvironmentVariables("%USERPROFILE%\\AppData\\Local\\Chromium\\User Data"), ChromiumListBox);
+            var firefox = LoadFirefoxFamilyProfiles(Environment.ExpandEnvironmentVariables("%USERPROFILE%\\AppData\\Roaming\\Mozilla\\Firefox"), FirefoxListBox, "\\mozilla firefox");
+            var waterfox = LoadFirefoxFamilyProfiles(Environment.ExpandEnvironmentVariables("%USERPROFILE%\\AppData\\Roaming\\Waterfox"), WaterfoxListBox, "\\waterfox");
+            var chrome = LoadChromiumProfiles(Environment.ExpandEnvironmentVariables("%USERPROFILE%\\AppData\\Local\\Google\\Chrome\\User Data"), ChromeListBox);
+            var brave = LoadChromiumProfiles(Environment.ExpandEnvironmentVariables("%USERPROFILE%\\AppData\\Local\\BraveSoftware\\Brave-Browser\\User Data"), BraveListBox);
+
+            int loaded = edge.Loaded + helium.Loaded + chromium.Loaded + firefox.Loaded + waterfox.Loaded + chrome.Loaded + brave.Loaded;
+            int skipped = edge.Skipped + helium.Skipped + chromium.Skipped + firefox.Skipped + waterfox.Skipped + chrome.Skipped + brave.Skipped;
+
+            var status = loaded == 1 ? "1 profile loaded" : $"{loaded} profiles loaded";
+            if (skipped > 0)
+                status += $" · {skipped} skipped";
+
+            var missing = new List<string>();
+            if (_edgeExe == null) missing.Add("Edge");
+            if (_heliumExe == null) missing.Add("Helium");
+            if (_firefoxExe == null) missing.Add("Firefox");
+            if (_waterfoxExe == null) missing.Add("Waterfox");
+            if (_chromiumExe == null) missing.Add("Chromium");
+            if (_chromeExe == null) missing.Add("Chrome");
+            if (_braveExe == null) missing.Add("Brave");
+            if (missing.Count > 0)
+                status += $" · not found: {string.Join(", ", missing)}";
+
+            StatusText.Text = status;
+        }
+
+        private static void MarkUnavailable(ListBox list, FrameworkElement header, string? exePath)
+        {
+            if (exePath == null)
+            {
+                list.IsEnabled = false;
+                header.IsEnabled = false;
+                header.ToolTip = "Browser executable was not found on this system.";
+            }
+        }
+
+        private static string? TryReadChromiumProfileName(string prefFile)
+        {
+            try
+            {
+                string pref;
+                using (var fs = new FileStream(prefFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+                using (var sr = new StreamReader(fs))
                 {
-                    var prefFn = Path.Combine(s, "Preferences");
-                    if (File.Exists(prefFn))
-                    {
-                        var pref = File.ReadAllText(prefFn);
-                        var deser = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.Nodes.JsonObject>(pref);
-                        if (deser?.TryGetPropertyValue("profile", out var profile) == true)
-                        {
-                            if (profile?.AsObject().TryGetPropertyValue("name", out var name) == true)
-                            {
-                                if (name?.AsValue().TryGetValue<string>(out var profileName) == true)
-                                {
-                                    MyItem m = new MyItem { DisplayName = profileName, Path = s, DirName = Path.GetFileName(s) };
-                                    EdgeListBox.Items.Add(m);
-                                }
-                            }
-                        }
-                    }
+                    pref = sr.ReadToEnd();
+                }
+                var deser = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.Nodes.JsonObject>(pref);
+                if (deser?.TryGetPropertyValue("profile", out var profile) == true &&
+                    profile?.AsObject().TryGetPropertyValue("name", out var name) == true &&
+                    name?.AsValue().TryGetValue<string>(out var profileName) == true &&
+                    !string.IsNullOrWhiteSpace(profileName))
+                {
+                    return profileName;
                 }
             }
-            else
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is System.Text.Json.JsonException || ex is InvalidOperationException)
             {
-                EdgeListBox.Visibility = Visibility.Hidden;
             }
+            return null;
+        }
 
-            var edgeDevPath = Environment.ExpandEnvironmentVariables("%USERPROFILE%\\AppData\\Local\\Microsoft\\Edge Dev\\User Data");
-            if (Directory.Exists(edgeDevPath))
+        private static (int Loaded, int Skipped) LoadChromiumProfiles(string userDataDir, ListBox target)
+        {
+            string[] dirs;
+            try
             {
-                EdgeDevListBox.Items.Clear();
-
-                foreach (var s in Directory.GetDirectories(edgeDevPath))
+                if (!Directory.Exists(userDataDir))
+                {
+                    target.Visibility = Visibility.Hidden;
+                    return (0, 0);
+                }
+                dirs = Directory.GetDirectories(userDataDir);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                target.Visibility = Visibility.Hidden;
+                return (0, 0);
+            }
+            var localState = ProfileNameResolver.ReadLocalStateProfiles(userDataDir);
+            var items = new List<MyItem>();
+            foreach (var s in dirs)
+            {
+                try
                 {
                     var prefFn = Path.Combine(s, "Preferences");
-                    if (File.Exists(prefFn))
+                    if (!File.Exists(prefFn))
+                        continue;
+                    var dirName = Path.GetFileName(s);
+                    var displayName = ProfileNameResolver.ResolveDisplayName(
+                        s, dirName, TryReadChromiumProfileName(prefFn), localState);
+                    items.Add(new MyItem
                     {
-                        var pref = File.ReadAllText(prefFn);
-                        var deser = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.Nodes.JsonObject>(pref);
-                        if (deser?.TryGetPropertyValue("profile", out var profile) == true)
-                        {
-                            if (profile?.AsObject().TryGetPropertyValue("name", out var name) == true)
-                            {
-                                if (name?.AsValue().TryGetValue<string>(out var profileName) == true)
-                                {
-                                    MyItem m = new MyItem { DisplayName = profileName, Path = s, DirName = Path.GetFileName(s) };
-                                    EdgeDevListBox.Items.Add(m);
-                                }
-                            }
-                        }
-                    }
+                        DisplayName = displayName,
+                        Path = s,
+                        DirName = dirName,
+                        ToolTip = s,
+                    });
+                }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+                {
                 }
             }
-            else
+
+            DisambiguateCollidingNames(items);
+
+            target.Items.Clear();
+            foreach (var item in items)
+                target.Items.Add(item);
+
+            return (items.Count, 0);
+        }
+
+        private static void DisambiguateCollidingNames(List<MyItem> items)
+        {
+            var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            foreach (var item in items)
+                counts[item.DisplayName] = counts.TryGetValue(item.DisplayName, out var c) ? c + 1 : 1;
+
+            foreach (var item in items)
             {
-                EdgeDevListBox.Visibility = Visibility.Hidden;
+                if (counts.TryGetValue(item.DisplayName, out var c) && c > 1)
+                    item.DisplayName += $" ({item.DirName})";
             }
+        }
 
-            var chromiumPath = Environment.ExpandEnvironmentVariables("%USERPROFILE%\\AppData\\Local\\Chromium\\User Data");
-            if (Directory.Exists(chromiumPath))
+        private static (int Loaded, int Skipped) LoadFirefoxFamilyProfiles(string appDataDir, ListBox target, string platformSuffix)
+        {
+            int loaded = 0, skipped = 0;
+            try
             {
-                ChromiumListBox.Items.Clear();
-
-                foreach (var s in Directory.GetDirectories(chromiumPath))
+                target.Items.Clear();
+                var iniPath = Path.Combine(appDataDir, "Profiles.ini");
+                if (!Directory.Exists(appDataDir) || !File.Exists(iniPath))
                 {
-                    var prefFn = Path.Combine(s, "Preferences");
-                    if (File.Exists(prefFn))
-                    {
-                        var pref = File.ReadAllText(prefFn);
-                        var deser = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.Nodes.JsonObject>(pref);
-                        if (deser?.TryGetPropertyValue("profile", out var profile) == true)
-                        {
-                            if (profile?.AsObject().TryGetPropertyValue("name", out var name) == true)
-                            {
-                                if (name?.AsValue().TryGetValue<string>(out var profileName) == true)
-                                {
-                                    MyItem m = new MyItem { DisplayName = profileName, Path = s, DirName = Path.GetFileName(s) };
-                                    ChromiumListBox.Items.Add(m);
-                                }
-                            }
-                        }
-                    }
+                    target.Visibility = Visibility.Hidden;
+                    return (0, 0);
                 }
-            }
-            else
-            {
-                ChromiumListBox.Visibility = Visibility.Hidden;
-            }
-
-            var ffProfilesPath = Environment.ExpandEnvironmentVariables("%USERPROFILE%\\AppData\\Roaming\\Mozilla\\Firefox");
-            if (Directory.Exists(ffProfilesPath))
-            {
-                FirefoxListBox.Items.Clear();
-
-                var ffProfiles = Path.Combine(ffProfilesPath, "Profiles.ini");
-                if (File.Exists(ffProfiles))
+                var ini = new IniFileReader(iniPath);
+                for (int i = 0; ; i++)
                 {
-                    var ini = new IniFileReader(ffProfiles);
-                    for (int i = 0; ; i++)
+                    try
                     {
-                        var profile = ini.GetSection($"Profile{i}");
-                        if (profile == null)
+                        if (ini.GetSection($"Profile{i}") == null)
                             break;
                         var name = ini.GetValue($"Profile{i}", "Name");
-                        var path = ini.GetValue($"Profile{i}", "Path").Replace("/", "\\");
-
+                        var rawPath = ini.GetValue($"Profile{i}", "Path");
+                        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(rawPath))
+                        {
+                            skipped++;
+                            continue;
+                        }
+                        var path = rawPath.Replace("/", "\\");
                         if (ini.GetValue($"Profile{i}", "IsRelative") == "1")
+                            path = Path.Combine(appDataDir, path);
+
+                        var compatFn = Path.Combine(path, "compatibility.ini");
+                        string? lastPlatformDir = null;
+                        if (File.Exists(compatFn))
                         {
-                            path = Path.Combine(ffProfilesPath, path);
-                        }
-
-                        var compat = new IniFileReader(Path.Combine(path, "compatibility.ini"));
-
-                        var sec = compat.GetSection("Compatibility");
-                        if (sec != null)
-                        {
-                            var p2 = compat.GetValue("Compatibility", "LastPlatformDir");
-
-                            if (p2 != null)
+                            try
                             {
-                                if (p2.EndsWith("\\mozilla firefox", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    MyItem m = new MyItem { DisplayName = name, Path = path, DirName = Path.GetFileName(path) };
-                                    FirefoxListBox.Items.Add(m);
-                                }
+                                lastPlatformDir = new IniFileReader(compatFn).GetValue("Compatibility", "LastPlatformDir");
+                            }
+                            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+                            {
                             }
                         }
+                        if (lastPlatformDir == null || !lastPlatformDir.EndsWith(platformSuffix, StringComparison.OrdinalIgnoreCase))
+                        {
+                            // Profile cannot be classified (no compatibility.ini, or
+                            // unreadable file) or belongs to another product (a Firefox
+                            // Beta/ESR profile won't match "\mozilla firefox", for example).
+                            skipped++;
+                            continue;
+                        }
+                        target.Items.Add(new MyItem { DisplayName = name, Path = path, DirName = Path.GetFileName(path), ToolTip = path });
+                        loaded++;
                     }
-                }
-                else
-                {
-                    FirefoxListBox.Visibility = Visibility.Hidden;
-                }
-            }
-            else
-            {
-                FirefoxListBox.Visibility = Visibility.Hidden;
-            }
-
-            var ffProfiles2Path = Environment.ExpandEnvironmentVariables("%USERPROFILE%\\AppData\\Roaming\\Mozilla\\Firefox");
-            if (Directory.Exists(ffProfiles2Path))
-            {
-                FirefoxDevListBox.Items.Clear();
-
-                var ffProfiles2 = Path.Combine(ffProfiles2Path, "Profiles.ini");
-                if (File.Exists(ffProfiles2))
-                {
-                    var ini = new IniFileReader(ffProfiles2);
-                    for (int i = 0; ; i++)
+                    catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is ArgumentException)
                     {
-                        var profile = ini.GetSection($"Profile{i}");
-                        if (profile == null)
-                            break;
-                        var name = ini.GetValue($"Profile{i}", "Name");
-                        var path = ini.GetValue($"Profile{i}", "Path").Replace("/", "\\");
-
-                        if (ini.GetValue($"Profile{i}", "IsRelative") == "1")
-                        {
-                            path = Path.Combine(ffProfiles2Path, path);
-                        }
-
-                        var compat = new IniFileReader(Path.Combine(path, "compatibility.ini"));
-
-                        var sec = compat.GetSection("Compatibility");
-                        if (sec != null)
-                        {
-                            var p2 = compat.GetValue("Compatibility", "LastPlatformDir");
-                            if (p2 != null)
-                            {
-                                if (p2.EndsWith("\\firefox developer edition", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    MyItem m = new MyItem { DisplayName = name, Path = path, DirName = Path.GetFileName(path) };
-                                    FirefoxDevListBox.Items.Add(m);
-                                }
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    FirefoxDevListBox.Visibility = Visibility.Hidden;
-                }
-            }
-            else
-            {
-                FirefoxDevListBox.Visibility = Visibility.Hidden;
-            }
-
-            var chromePath = Environment.ExpandEnvironmentVariables("%USERPROFILE%\\AppData\\Local\\Google\\Chrome\\User Data");
-            if (Directory.Exists(chromePath))
-            {
-                ChromeListBox.Items.Clear();
-                foreach (var s in Directory.GetDirectories(chromePath))
-                {
-                    var prefFn = Path.Combine(s, "Preferences");
-                    if (File.Exists(prefFn))
-                    {
-                        var pref = File.ReadAllText(prefFn);
-                        var deser = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.Nodes.JsonObject>(pref);
-                        if (deser?.TryGetPropertyValue("profile", out var profile) == true)
-                        {
-                            if (profile?.AsObject().TryGetPropertyValue("name", out var name) == true)
-                            {
-                                if (name?.AsValue().TryGetValue<string>(out var profileName) == true)
-                                {
-                                    MyItem m = new MyItem { DisplayName = profileName, Path = s, DirName = Path.GetFileName(s) };
-                                    ChromeListBox.Items.Add(m);
-                                }
-                            }
-                        }
+                        skipped++;
                     }
                 }
             }
-            else
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                ChromeListBox.Visibility = Visibility.Hidden;
             }
-
-            var chromeDevPath = Environment.ExpandEnvironmentVariables("%USERPROFILE%\\AppData\\Local\\Google\\Chrome Dev\\User Data");
-            if (Directory.Exists(chromeDevPath))
-            {
-                ChromeDevListBox.Items.Clear();
-
-                foreach (var s in Directory.GetDirectories(chromeDevPath))
-                {
-                    var prefFn = Path.Combine(s, "Preferences");
-                    if (File.Exists(prefFn))
-                    {
-                        var pref = File.ReadAllText(prefFn);
-                        var deser = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.Nodes.JsonObject>(pref);
-                        if (deser?.TryGetPropertyValue("profile", out var profile) == true)
-                        {
-                            if (profile?.AsObject().TryGetPropertyValue("name", out var name) == true)
-                            {
-                                if (name?.AsValue().TryGetValue<string>(out var profileName) == true)
-                                {
-                                    MyItem m = new MyItem { DisplayName = profileName, Path = s, DirName = Path.GetFileName(s) };
-                                    ChromeDevListBox.Items.Add(m);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            else
-            {
-                ChromeDevListBox.Visibility = Visibility.Hidden;
-            }
+            return (loaded, skipped);
         }
 
         private void UpdateButtonState()
@@ -368,10 +449,10 @@ namespace BrowserSelect
             SelectButton.IsEnabled =
                 EdgeListBox.SelectedItem != null ||
                 FirefoxListBox.SelectedItem != null ||
-                EdgeDevListBox.SelectedItem != null ||
-                FirefoxDevListBox.SelectedItem != null ||
+                HeliumListBox.SelectedItem != null ||
+                WaterfoxListBox.SelectedItem != null ||
                 ChromiumListBox.SelectedItem != null ||
-                ChromeDevListBox.SelectedItem != null ||
+                BraveListBox.SelectedItem != null ||
                 ChromeListBox.SelectedItem != null;
         }
 
@@ -381,11 +462,11 @@ namespace BrowserSelect
             {
                 ChromiumListBox.SelectedItem = null;
                 //EdgeListBox.SelectedItem = null;
-                EdgeDevListBox.SelectedItem = null;
+                HeliumListBox.SelectedItem = null;
                 FirefoxListBox.SelectedItem = null;
-                FirefoxDevListBox.SelectedItem = null;
+                WaterfoxListBox.SelectedItem = null;
                 ChromeListBox.SelectedItem = null;
-                ChromeDevListBox.SelectedItem = null;
+                BraveListBox.SelectedItem = null;
             }
             UpdateButtonState();
         }
@@ -401,11 +482,11 @@ namespace BrowserSelect
             {
                 ChromiumListBox.SelectedItem = null;
                 EdgeListBox.SelectedItem = null;
-                EdgeDevListBox.SelectedItem = null;
+                HeliumListBox.SelectedItem = null;
                 //FirefoxListBox.SelectedItem = null;
-                FirefoxDevListBox.SelectedItem = null;
+                WaterfoxListBox.SelectedItem = null;
                 ChromeListBox.SelectedItem = null;
-                ChromeDevListBox.SelectedItem = null;
+                BraveListBox.SelectedItem = null;
             }
             UpdateButtonState();
         }
@@ -416,11 +497,11 @@ namespace BrowserSelect
             {
                 //ChromiumListBox.SelectedItem = null;
                 EdgeListBox.SelectedItem = null;
-                EdgeDevListBox.SelectedItem = null;
+                HeliumListBox.SelectedItem = null;
                 FirefoxListBox.SelectedItem = null;
-                FirefoxDevListBox.SelectedItem = null;
+                WaterfoxListBox.SelectedItem = null;
                 ChromeListBox.SelectedItem = null;
-                ChromeDevListBox.SelectedItem = null;
+                BraveListBox.SelectedItem = null;
             }
             UpdateButtonState();
         }
@@ -446,130 +527,102 @@ namespace BrowserSelect
             {
                 ChromiumListBox.SelectedItem = null;
                 EdgeListBox.SelectedItem = null;
-                EdgeDevListBox.SelectedItem = null;
+                HeliumListBox.SelectedItem = null;
                 FirefoxListBox.SelectedItem = null;
-                FirefoxDevListBox.SelectedItem = null;
+                WaterfoxListBox.SelectedItem = null;
                 //ChromeListBox.SelectedItem = null;
-                ChromeDevListBox.SelectedItem = null;
+                BraveListBox.SelectedItem = null;
             }
             UpdateButtonState();
 
         }
 
-        private void ChromeDevListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void BraveListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (ChromeDevListBox.SelectedItem is MyItem i)
+            if (BraveListBox.SelectedItem is MyItem i)
             {
                 ChromiumListBox.SelectedItem = null;
                 EdgeListBox.SelectedItem = null;
-                EdgeDevListBox.SelectedItem = null;
+                HeliumListBox.SelectedItem = null;
                 FirefoxListBox.SelectedItem = null;
-                FirefoxDevListBox.SelectedItem = null;
+                WaterfoxListBox.SelectedItem = null;
                 ChromeListBox.SelectedItem = null;
-                //ChromeDevListBox.SelectedItem = null;
+                //BraveListBox.SelectedItem = null;
             }
             UpdateButtonState();
         }
 
-        private void ChromeDevListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        private void BraveListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             SelectButton_Click(sender, null);
         }
 
-        private void FirefoxDevListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void WaterfoxListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (FirefoxDevListBox.SelectedItem is MyItem i)
+            if (WaterfoxListBox.SelectedItem is MyItem i)
             {
                 ChromiumListBox.SelectedItem = null;
                 EdgeListBox.SelectedItem = null;
-                EdgeDevListBox.SelectedItem = null;
+                HeliumListBox.SelectedItem = null;
                 FirefoxListBox.SelectedItem = null;
-                //FirefoxDevListBox.SelectedItem = null;
+                //WaterfoxListBox.SelectedItem = null;
                 ChromeListBox.SelectedItem = null;
-                ChromeDevListBox.SelectedItem = null;
+                BraveListBox.SelectedItem = null;
             }
             UpdateButtonState();
         }
 
-        private void FirefoxDevListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        private void WaterfoxListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             SelectButton_Click(sender, null);
         }
 
-        private void EdgeDevListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void HeliumListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (EdgeDevListBox.SelectedItem is MyItem i)
+            if (HeliumListBox.SelectedItem is MyItem i)
             {
                 ChromiumListBox.SelectedItem = null;
                 EdgeListBox.SelectedItem = null;
-                //EdgeDevListBox.SelectedItem = null;
+                //HeliumListBox.SelectedItem = null;
                 FirefoxListBox.SelectedItem = null;
-                FirefoxDevListBox.SelectedItem = null;
+                WaterfoxListBox.SelectedItem = null;
                 ChromeListBox.SelectedItem = null;
-                ChromeDevListBox.SelectedItem = null;
+                BraveListBox.SelectedItem = null;
             }
             UpdateButtonState();
         }
 
-        private void EdgeDevListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        private void HeliumListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             SelectButton_Click(sender, null);
         }
 
-        private void EdgeListBox_ContextMenu_Open_Click(object sender, RoutedEventArgs e)
+        private void EdgeListBox_ContextMenu_Open_Click(object sender, RoutedEventArgs e) => OpenProfileFolder(EdgeListBox.SelectedItem);
+        private void HeliumListBox_ContextMenu_Open_Click(object sender, RoutedEventArgs e) => OpenProfileFolder(HeliumListBox.SelectedItem);
+        private void ChromeListBox_ContextMenu_Open_Click(object sender, RoutedEventArgs e) => OpenProfileFolder(ChromeListBox.SelectedItem);
+        private void BraveListBox_ContextMenu_Open_Click(object sender, RoutedEventArgs e) => OpenProfileFolder(BraveListBox.SelectedItem);
+        private void ChromiumListBox_ContextMenu_Open_Click(object sender, RoutedEventArgs e) => OpenProfileFolder(ChromiumListBox.SelectedItem);
+        private void FirefoxListBox_ContextMenu_Open_Click(object sender, RoutedEventArgs e) => OpenProfileFolder(FirefoxListBox.SelectedItem);
+        private void WaterfoxListBox_ContextMenu_Open_Click(object sender, RoutedEventArgs e) => OpenProfileFolder(WaterfoxListBox.SelectedItem);
+
+        private static void OpenProfileFolder(object? selectedItem)
         {
-            var e2 = EdgeListBox.SelectedItem as MyItem;
-            if (e2 != null && !string.IsNullOrEmpty(e2.Path))
+            if (selectedItem is not MyItem item || string.IsNullOrEmpty(item.Path))
+                return;
+            if (!Directory.Exists(item.Path))
             {
-                System.Diagnostics.Process.Start("explorer.exe", e2.Path);
+                MessageBox.Show("The profile folder no longer exists.", "BrowserSelect", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
             }
-        }
-        private void EdgeDevListBox_ContextMenu_Open_Click(object sender, RoutedEventArgs e)
-        {
-            var e2 = EdgeDevListBox.SelectedItem as MyItem;
-            if (e2 != null && !string.IsNullOrEmpty(e2.Path))
+            try
             {
-                System.Diagnostics.Process.Start("explorer.exe", e2.Path);
+                var psi = new ProcessStartInfo { FileName = "explorer.exe", UseShellExecute = false };
+                psi.ArgumentList.Add(item.Path);
+                Process.Start(psi);
             }
-        }
-        private void ChromeListBox_ContextMenu_Open_Click(object sender, RoutedEventArgs e)
-        {
-            var e2 = ChromeListBox.SelectedItem as MyItem;
-            if (e2 != null && !string.IsNullOrEmpty(e2.Path))
+            catch (Exception ex)
             {
-                System.Diagnostics.Process.Start("explorer.exe", e2.Path);
-            }
-        }
-        private void ChromeDevListBox_ContextMenu_Open_Click(object sender, RoutedEventArgs e)
-        {
-            var e2 = ChromeDevListBox.SelectedItem as MyItem;
-            if (e2 != null && !string.IsNullOrEmpty(e2.Path))
-            {
-                System.Diagnostics.Process.Start("explorer.exe", e2.Path);
-            }
-        }
-        private void ChromiumListBox_ContextMenu_Open_Click(object sender, RoutedEventArgs e)
-        {
-            var e2 = ChromiumListBox.SelectedItem as MyItem;
-            if (e2 != null && !string.IsNullOrEmpty(e2.Path))
-            {
-                System.Diagnostics.Process.Start("explorer.exe", e2.Path);
-            }
-        }
-        private void FirefoxListBox_ContextMenu_Open_Click(object sender, RoutedEventArgs e)
-        {
-            var e2 = FirefoxListBox.SelectedItem as MyItem;
-            if (e2 != null && !string.IsNullOrEmpty(e2.Path))
-            {
-                System.Diagnostics.Process.Start("explorer.exe", e2.Path);
-            }
-        }
-        private void FirefoxDevListBox_ContextMenu_Open_Click(object sender, RoutedEventArgs e)
-        {
-            var e2 = FirefoxDevListBox.SelectedItem as MyItem;
-            if (e2 != null && !string.IsNullOrEmpty(e2.Path))
-            {
-                System.Diagnostics.Process.Start("explorer.exe", e2.Path);
+                MessageBox.Show($"Could not open the profile folder: {ex.Message}", "BrowserSelect", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

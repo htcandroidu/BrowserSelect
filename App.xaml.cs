@@ -15,7 +15,7 @@ namespace BrowserSelect
 
         protected override void OnStartup(StartupEventArgs e)
         {
-            if( e.Args.Any() && e.Args.Contains("--install"))
+            if (e.Args.Length == 1 && (string.Equals(e.Args[0], "--install", StringComparison.Ordinal) || string.Equals(e.Args[0], "--uninstall", StringComparison.Ordinal)))
             {
                 Program.Main2(e.Args);
                 base.Shutdown();

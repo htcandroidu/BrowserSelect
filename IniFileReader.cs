@@ -21,7 +21,7 @@ namespace BrowserSelect
         {
             string currentSection = string.Empty;
 
-            foreach (var line in File.ReadLines(filePath))
+            foreach (var line in ReadLinesShared(filePath))
             {
                 var trimmedLine = line.Trim();
 
@@ -49,7 +49,16 @@ namespace BrowserSelect
             }
         }
 
-        public string GetValue(string section, string key, string defaultValue = null)
+        private static IEnumerable<string> ReadLinesShared(string filePath)
+        {
+            using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            using var sr = new StreamReader(fs);
+            string? line;
+            while ((line = sr.ReadLine()) != null)
+                yield return line;
+        }
+
+        public string? GetValue(string section, string key, string? defaultValue = null)
         {
             if (_data.TryGetValue(section, out var sectionData) && sectionData.TryGetValue(key, out var value))
                 return value;
@@ -57,7 +66,7 @@ namespace BrowserSelect
             return defaultValue;
         }
 
-        public Dictionary<string, string> GetSection(string section)
+        public Dictionary<string, string>? GetSection(string section)
         {
             if (_data.TryGetValue(section, out var sectionData))
                 return new Dictionary<string, string>(sectionData);

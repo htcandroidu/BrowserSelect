@@ -1,172 +1,148 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 using Microsoft.Win32;
 
 namespace BrowserSelect;
 
-static class RegistryExtension
-{
-    public static RegistryKey? CreateOrOpenSubKey(this RegistryKey r, string name, bool writeable)
-    {
-        if (r.GetSubKeyNames().Contains(name) == false)
-        {
-            return r.CreateSubKey(name, writeable);
-        }
-        else
-        {
-            return r.OpenSubKey(name, writeable);
-        }
-    }
-}
-
 class Program
 {
+    private const string RegisteredAppId = "kenaro.BrowserSelect";
+    private const string CapabilitiesPath = @"Software\kenaro\kenaro.BrowserSelect\Capabilities";
+
     [STAThread]
     public static void Main2(string[] args)
     {
-        if (args.Any() && args.Contains("--install"))
+        if (args.Length == 1 && string.Equals(args[0], "--install", StringComparison.Ordinal))
         {
-            RegistryKey? r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15, r16, r17, r18;
+            RunInstallerAction(Install, "Registration complete." + Environment.NewLine + Environment.NewLine +
+                "Set \"kenaro BrowserSelect\" as your default browser in Windows Settings > Apps > Default apps.");
+            return;
+        }
 
-            r0 = r1 = r2 = r3 = r4 = r5 = r6 = r7 = r8 = r9 = r10 = r11 = r12 = r13 = r14 = r15 = r16 = r17 = r18 = null;
-
-            try
-            {
-                r0 = Registry.LocalMachine.CreateOrOpenSubKey(@"SOFTWARE\RegisteredApplications", true);
-
-                r0?.SetValue("kenaro.BrowserSelect", @"Software\kenaro\kenaro.BrowserSelect\Capabilities");
-            }
-            finally
-            {
-                r0?.Close();
-            }
-
-            try
-            {
-                r1 = Registry.LocalMachine.CreateOrOpenSubKey(@"SOFTWARE", true);
-                try
-                {
-                    r2 = r1?.CreateOrOpenSubKey(@"kenaro", true);
-                    try
-                    {
-                        r3 = r2?.CreateOrOpenSubKey(@"kenaro.BrowserSelect", true);
-                        try
-                        {
-                            r4 = r3?.CreateOrOpenSubKey(@"Capabilities", true);
-                            r4?.SetValue("ApplicationName", "kenaro BrowserSelect");
-                            r4?.SetValue("ApplicationDescription", "Select your preferred browser and browser profile for opening links or just starting the browser with the required profile.");
-
-                            try
-                            {
-                                r5 = r4?.OpenSubKey(@"Startmenu", true);
-
-                                r5?.SetValue("StartmenuInternet", $@"""{Path.ChangeExtension(typeof(Program).Assembly.Location, ".exe")}""");
-                            }
-                            finally
-                            {
-                                r5?.Close();
-                            }
-
-                            try
-                            {
-                                r6 = r4?.OpenSubKey(@"UrlAssociations", true);
-
-                                r6?.SetValue("http", "kenaro.BrowserSelect");
-                                r6?.SetValue("https", "kenaro.BrowserSelect");
-
-                                r6.Close();
-                            }
-                            finally { r6?.Close(); }
-
-                        }
-                        finally { r4?.Close(); }
-
-                        try
-                        {
-                            r7 = r3?.OpenSubKey(@"shell", true);
-                            try
-                            {
-                                r8 = r7?.OpenSubKey(@"Open", true);
-                                try
-                                {
-                                    r9 = r8?.OpenSubKey(@"Command", true);
-
-                                    r9?.SetValue("", Path.ChangeExtension(typeof(Program).Assembly.Location, ".exe"));
-
-                                }
-                                finally { r9?.Close(); }
-                            }
-                            finally { r8?.Close(); }
-                        }
-                        finally { r7?.Close(); }
-                    }
-                    finally { r3?.Close(); }
-                }
-                finally { r2?.Close(); }
-
-                try
-                {
-                    r10 = r1?.CreateOrOpenSubKey("Classes", true);
-
-                    try
-                    {
-                        r11 = r10?.CreateOrOpenSubKey(@"kenaro.BrowserSelect", true);
-
-                        try
-                        {
-                            r12 = r11?.CreateOrOpenSubKey(@"Application", true);
-
-                            r12?.SetValue("ApplicationCompany", "kenaro");
-                            r12?.SetValue("ApplicationDescription", "Select your preferred browser and browser profile for opening links or just starting the browser with the required profile.");
-                            r12?.SetValue("ApplicationName", "kenaro BrowserSelect");
-                            r12?.SetValue("ApplicationIcon", $@"{Path.ChangeExtension(typeof(Program).Assembly.Location, ".exe")},0");
-                        }
-                        finally { r12?.Close(); }
-
-                        try
-                        {
-                            r13 = r11?.CreateOrOpenSubKey(@"DefaultIcon", true);
-
-                            r13?.SetValue("", $@"{typeof(Program).Assembly.Location},0");
-                        }
-                        finally { r13?.Close(); }
-
-                        try
-                        {
-                            r14 = r11?.CreateOrOpenSubKey(@"shell", true);
-
-                            try
-                            {
-                                r15 = r14?.CreateOrOpenSubKey(@"Open", true);
-
-                                try
-                                {
-                                    r16 = r15?.CreateOrOpenSubKey(@"Command", true);
-
-                                    r16?.SetValue("", $@"""{Path.ChangeExtension(typeof(Program).Assembly.Location, ".exe")}"" ""%1""");
-                                }
-                                finally { r16?.Close(); }
-                            }
-                            finally { r15?.Close(); }
-                        }
-                        finally { r14?.Close(); }
-                    }
-                    finally { r11?.Close(); }
-                }
-                finally { r10?.Close(); }
-            }
-            finally { r1?.Close(); }
-
-
+        if (args.Length == 1 && string.Equals(args[0], "--uninstall", StringComparison.Ordinal))
+        {
+            RunInstallerAction(Uninstall, "Registration removed.");
             return;
         }
 
         var application = new App();
         application.Run();
+    }
+
+    private static void RunInstallerAction(Action action, string successMessage)
+    {
+        try
+        {
+            action();
+            System.Windows.MessageBox.Show(successMessage, "BrowserSelect",
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            System.Windows.MessageBox.Show("Registration failed: access to the registry was denied.",
+                "BrowserSelect", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show($"Registration failed: {ex.Message}",
+                "BrowserSelect", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+        }
+    }
+
+    private static void Install()
+    {
+        var assemblyPath = typeof(Program).Assembly.Location;
+        var exePath = Path.ChangeExtension(assemblyPath, ".exe");
+        var quotedExe = $"\"{exePath}\"";
+
+        // Per-user registration: HKCU needs no elevation and is what the
+        // "Default apps" UI discovers for the current user.
+        using (var registeredApplications = Registry.CurrentUser.CreateSubKey(@"Software\RegisteredApplications", true))
+        {
+            registeredApplications?.SetValue(RegisteredAppId, CapabilitiesPath);
+        }
+
+        using (var kenaroKey = Registry.CurrentUser.CreateSubKey(@"Software\kenaro", true))
+        using (var appKey = kenaroKey?.CreateSubKey("kenaro.BrowserSelect", true))
+        using (var capabilities = appKey?.CreateSubKey("Capabilities", true))
+        {
+            capabilities?.SetValue("ApplicationName", "kenaro BrowserSelect");
+            capabilities?.SetValue("ApplicationDescription", "Select your preferred browser and browser profile for opening links or just starting the browser with the required profile.");
+
+            using (var startMenu = capabilities?.CreateSubKey("Startmenu", true))
+            {
+                startMenu?.SetValue("StartmenuInternet", quotedExe);
+            }
+
+            using (var urlAssociations = capabilities?.CreateSubKey("UrlAssociations", true))
+            {
+                urlAssociations?.SetValue("http", RegisteredAppId);
+                urlAssociations?.SetValue("https", RegisteredAppId);
+            }
+
+            using (var shell = appKey?.CreateSubKey("shell", true))
+            using (var open = shell?.CreateSubKey("Open", true))
+            using (var command = open?.CreateSubKey("Command", true))
+            {
+                command?.SetValue("", quotedExe);
+            }
+        }
+
+        using (var classes = Registry.CurrentUser.CreateSubKey(@"Software\Classes", true))
+        using (var progIdKey = classes?.CreateSubKey(RegisteredAppId, true))
+        {
+            using (var application = progIdKey?.CreateSubKey("Application", true))
+            {
+                application?.SetValue("ApplicationCompany", "kenaro");
+                application?.SetValue("ApplicationDescription", "Select your preferred browser and browser profile for opening links or just starting the browser with the required profile.");
+                application?.SetValue("ApplicationName", "kenaro BrowserSelect");
+                application?.SetValue("ApplicationIcon", $"{exePath},0");
+            }
+
+            using (var defaultIcon = progIdKey?.CreateSubKey("DefaultIcon", true))
+            {
+                defaultIcon?.SetValue("", $"{assemblyPath},0");
+            }
+
+            using (var shell = progIdKey?.CreateSubKey("shell", true))
+            using (var open = shell?.CreateSubKey("Open", true))
+            using (var command = open?.CreateSubKey("Command", true))
+            {
+                command?.SetValue("", $"{quotedExe} \"%1\"");
+            }
+        }
+    }
+
+    private static void Uninstall()
+    {
+        using (var registeredApplications = Registry.CurrentUser.OpenSubKey(@"Software\RegisteredApplications", true))
+        {
+            registeredApplications?.DeleteValue(RegisteredAppId, throwOnMissingValue: false);
+        }
+
+        DeleteSubKeyTreeIfExists(@"Software\kenaro\kenaro.BrowserSelect");
+        DeleteSubKeyTreeIfExists(@"Software\Classes\kenaro.BrowserSelect");
+
+        // Remove the now-empty parent key, but leave it alone if another
+        // kenaro tool registered something under it.
+        var parent = Registry.CurrentUser.OpenSubKey(@"Software\kenaro", true);
+        if (parent != null)
+        {
+            var isEmpty = parent.SubKeyCount == 0;
+            parent.Close();
+            if (isEmpty)
+            {
+                Registry.CurrentUser.DeleteSubKey(@"Software\kenaro", throwOnMissingSubKey: false);
+            }
+        }
+    }
+
+    private static void DeleteSubKeyTreeIfExists(string path)
+    {
+        if (Registry.CurrentUser.OpenSubKey(path) is RegistryKey existing)
+        {
+            existing.Close();
+            Registry.CurrentUser.DeleteSubKeyTree(path, throwOnMissingSubKey: false);
+        }
     }
 }
