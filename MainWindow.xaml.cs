@@ -37,6 +37,7 @@ namespace BrowserSelect
         public MainWindow()
         {
             InitializeComponent();
+            Loaded += (_, _) => EnablePixelScrolling();
         }
 
         private static bool TryGetTargetUrl(string? raw, out string? url)
@@ -630,6 +631,58 @@ namespace BrowserSelect
         {
             if (e.Key == Key.Enter)
                 SelectButton_Click(sender, null);
+        }
+
+        private void Listbox_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (e.Handled || sender is not ListBox listBox)
+                return;
+            var scroller = FindScrollViewer(listBox);
+            if (scroller == null)
+                return;
+            if (scroller.CanContentScroll)
+                scroller.CanContentScroll = false;
+
+            // WPF's ScrollViewer ignores the wheel delta: every event scrolls a
+            // fixed WheelScrollLines * 16px, so scaling/re-raising the delta
+            // cannot slow it down. Item-based scrolling additionally floors
+            // sub-item offsets away, which is why slow touchpad gestures (tiny
+            // deltas per event) previously dead-stopped entirely. Scroll in
+            // pixel space instead: a quarter of the fixed per-notch amount,
+            // proportional to the gesture's accrued delta.
+            int linesPerNotch = SystemParameters.WheelScrollLines;
+            if (linesPerNotch <= 0)
+                linesPerNotch = 3; // -1 ("by page") or 0 → use the common default
+            double pxPerNotch = linesPerNotch * 16.0 / 8.0;
+            scroller.ScrollToVerticalOffset(scroller.VerticalOffset - e.Delta / 120.0 * pxPerNotch);
+            e.Handled = true;
+        }
+
+        private void EnablePixelScrolling()
+        {
+            foreach (var list in new ListBox[]
+            {
+                FirefoxListBox, ChromiumListBox,
+                EdgeListBox, HeliumListBox, ChromeListBox, BraveListBox, WaterfoxListBox,
+            })
+            {
+                if (FindScrollViewer(list) is { } scroller)
+                    scroller.CanContentScroll = false;
+            }
+        }
+
+        private static ScrollViewer? FindScrollViewer(DependencyObject root)
+        {
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+            {
+                var child = VisualTreeHelper.GetChild(root, i);
+                if (child is ScrollViewer scroller)
+                    return scroller;
+                var nested = FindScrollViewer(child);
+                if (nested != null)
+                    return nested;
+            }
+            return null;
         }
 
         private void Window_KeyUp(object sender, KeyEventArgs e)

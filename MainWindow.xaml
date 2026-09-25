@@ -32,7 +32,7 @@
             <!-- Top row: Firefox, left half of the window -->
             <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" FontSize="12" Margin="5" Name="FirefoxHeader">Firefox Profiles:</TextBlock>
             <ListBox ScrollViewer.HorizontalScrollBarVisibility="Hidden" Name="FirefoxListBox" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="5" SelectionChanged="FirefoxListBox_SelectionChanged" MouseDoubleClick="FirefoxListBox_MouseDoubleClick"
-                     Keyboard.KeyUp="Listbox_KeyUp">
+                     Keyboard.KeyUp="Listbox_KeyUp" PreviewMouseWheel="Listbox_PreviewMouseWheel">
                 <ListBox.ContextMenu>
                     <ContextMenu>
                         <MenuItem Header="Open" Click="FirefoxListBox_ContextMenu_Open_Click"/>
@@ -48,7 +48,7 @@
             <!-- Top row: Chromium, right half of the window -->
             <TextBlock Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" FontSize="12" Margin="5" Name="ChromiumHeader">Chromium Profiles:</TextBlock>
             <ListBox ScrollViewer.HorizontalScrollBarVisibility="Hidden" Name="ChromiumListBox" Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="2" Margin="5" SelectionChanged="ChromiumListBox_SelectionChanged" MouseDoubleClick="ChromiumListBox_MouseDoubleClick"
-                     Keyboard.KeyUp="Listbox_KeyUp">
+                     Keyboard.KeyUp="Listbox_KeyUp" PreviewMouseWheel="Listbox_PreviewMouseWheel">
                 <ListBox.ContextMenu>
                     <ContextMenu>
                         <MenuItem Header="Open" Click="ChromiumListBox_ContextMenu_Open_Click"/>
@@ -82,7 +82,7 @@
                 <TextBlock Grid.Row="0" Grid.Column="4" FontSize="12" Margin="5" Name="WaterfoxHeader">Waterfox Profiles:</TextBlock>
 
                 <ListBox ScrollViewer.HorizontalScrollBarVisibility="Hidden" Name="EdgeListBox" Grid.Row="1" Grid.Column="0" Margin="5" SelectionChanged="EdgeListBox_SelectionChanged" MouseDoubleClick="EdgeListBox_MouseDoubleClick"
-                         Keyboard.KeyUp="Listbox_KeyUp">
+                         Keyboard.KeyUp="Listbox_KeyUp" PreviewMouseWheel="Listbox_PreviewMouseWheel">
                     <ListBox.ContextMenu>
                         <ContextMenu>
                             <MenuItem Header="Open" Click="EdgeListBox_ContextMenu_Open_Click"/>
@@ -96,7 +96,7 @@
                 </ListBox>
 
                 <ListBox ScrollViewer.HorizontalScrollBarVisibility="Hidden" Name="HeliumListBox" Grid.Row="1" Grid.Column="1" Margin="5" SelectionChanged="HeliumListBox_SelectionChanged" MouseDoubleClick="HeliumListBox_MouseDoubleClick"
-                         Keyboard.KeyUp="Listbox_KeyUp">
+                         Keyboard.KeyUp="Listbox_KeyUp" PreviewMouseWheel="Listbox_PreviewMouseWheel">
                     <ListBox.ContextMenu>
                         <ContextMenu>
                             <MenuItem Header="Open" Click="HeliumListBox_ContextMenu_Open_Click"/>
@@ -110,7 +110,7 @@
                 </ListBox>
 
                 <ListBox ScrollViewer.HorizontalScrollBarVisibility="Hidden" Name="ChromeListBox" Grid.Row="1" Grid.Column="2" Margin="5" SelectionChanged="ChromeListBox_SelectionChanged" MouseDoubleClick="ChromeListBox_MouseDoubleClick"
-                         Keyboard.KeyUp="Listbox_KeyUp">
+                         Keyboard.KeyUp="Listbox_KeyUp" PreviewMouseWheel="Listbox_PreviewMouseWheel">
                     <ListBox.ContextMenu>
                         <ContextMenu>
                             <MenuItem Header="Open" Click="ChromeListBox_ContextMenu_Open_Click"/>
@@ -124,7 +124,7 @@
                 </ListBox>
 
                 <ListBox ScrollViewer.HorizontalScrollBarVisibility="Hidden" Name="BraveListBox" Grid.Row="1" Grid.Column="3" Margin="5" SelectionChanged="BraveListBox_SelectionChanged" MouseDoubleClick="BraveListBox_MouseDoubleClick"
-                         Keyboard.KeyUp="Listbox_KeyUp">
+                         Keyboard.KeyUp="Listbox_KeyUp" PreviewMouseWheel="Listbox_PreviewMouseWheel">
                     <ListBox.ContextMenu>
                         <ContextMenu>
                             <MenuItem Header="Open" Click="BraveListBox_ContextMenu_Open_Click"/>
@@ -138,7 +138,7 @@
                 </ListBox>
 
                 <ListBox ScrollViewer.HorizontalScrollBarVisibility="Hidden" Name="WaterfoxListBox" Grid.Row="1" Grid.Column="4" Margin="5" SelectionChanged="WaterfoxListBox_SelectionChanged" MouseDoubleClick="WaterfoxListBox_MouseDoubleClick"
-                         Keyboard.KeyUp="Listbox_KeyUp">
+                         Keyboard.KeyUp="Listbox_KeyUp" PreviewMouseWheel="Listbox_PreviewMouseWheel">
                     <ListBox.ContextMenu>
                         <ContextMenu>
                             <MenuItem Header="Open" Click="WaterfoxListBox_ContextMenu_Open_Click"/>
